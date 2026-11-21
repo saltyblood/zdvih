@@ -15,7 +15,7 @@ Zdvih is an offline gym workout log built with React Native and Expo. These rule
 
 ## Stack rules
 
-- Expo **SDK 54** exactly. The app must run in the App Store version of **Expo Go** on an iPhone. Never upgrade the SDK.
+- Expo **SDK 58** exactly. The App Store version of **Expo Go** for iPhone supports only the latest SDK (58 as of November 2026), and the app must run in it. Never change the SDK unless the user asks.
 - Add any `expo-*` or `react-native-*` package only with `npx expo install <pkg>`. Pure-JS dev tools (vitest, sql.js, eslint) with `npm install -D`.
 - No native code, no config plugins that need a development build, no `expo prebuild`.
 - No network access in app code: no `fetch`, `axios`, `XMLHttpRequest`, analytics or remote services.
@@ -39,7 +39,7 @@ Run every command that exists at the current step before reporting. Never disabl
 
 - The developer works on **Windows** (PowerShell or Git Bash). Use npm scripts rather than shell-specific commands; no `rm -rf`, `export VAR=` or other Unix-only syntax inside `package.json` scripts.
 - There is no Mac, no iOS Simulator and no local iOS build. The human tests on a physical iPhone through Expo Go.
-- Step 1 only: `create-expo-app` refuses or conflicts in a non-empty folder. Generate the app with `npx create-expo-app@latest <temp-folder> --template default@sdk-54` outside the repo, then move its files into the repo root without overwriting `CLAUDE.md`, `SPEC.md`, `project.md`, `zdvih-design.md` or `.claude/`. Merge `.gitignore` instead of replacing it.
+- Step 1 only: `create-expo-app` refuses or conflicts in a non-empty folder. Generate the app with `npx create-expo-app@latest <temp-folder> --template default@sdk-58` outside the repo, then move its files into the repo root without overwriting `CLAUDE.md`, `SPEC.md`, `project.md`, `zdvih-design.md` or `.claude/`. Merge `.gitignore` instead of replacing it.
 
 ## Git
 

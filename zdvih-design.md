@@ -6,7 +6,7 @@
 
 ## 0. One-paragraph summary
 
-Zdvih is an offline, single-user React Native (Expo SDK 54) app for logging gym workouts. The user starts a **workout**, logs **sets** (exercise + weight + reps) while seeing the sets of the **previous workout** for that exercise, and finishes the workout. A 180-second **rest** countdown starts automatically when the phone is **picked up** after lying still for at least 10 seconds (accelerometer), or manually by a button; when it ends the phone vibrates (app open) or a local notification fires (background / locked). While a workout is active the screen is kept on, and a reminder notification fires after 30 minutes of inactivity. History lists finished workouts; a progress screen charts the **estimated 1RM** (Epley) of the best set per workout. All data lives in a local SQLite database.
+Zdvih is an offline, single-user React Native (Expo SDK 58) app for logging gym workouts. The user starts a **workout**, logs **sets** (exercise + weight + reps) while seeing the sets of the **previous workout** for that exercise, and finishes the workout. A 180-second **rest** countdown starts automatically when the phone is **picked up** after lying still for at least 10 seconds (accelerometer), or manually by a button; when it ends the phone vibrates (app open) or a local notification fires (background / locked). While a workout is active the screen is kept on, and a reminder notification fires after 30 minutes of inactivity. History lists finished workouts; a progress screen charts the **estimated 1RM** (Epley) of the best set per workout. All data lives in a local SQLite database.
 
 ## 1. Goal and scope
 
@@ -19,7 +19,7 @@ Zdvih is an offline, single-user React Native (Expo SDK 54) app for logging gym 
 | # | Open point | Decision |
 |---|---|---|
 | D1 | Project layout | Single Expo app at the **repository root** (no `frontend/`/`backend/` split — there is no backend). Expo Router (file-based routes in `app/`). TypeScript `strict: true`. |
-| D2 | SDK pinning | Expo **SDK 54**, the version supported by Expo Go in the App Store. Every native-related package MUST be added with `npx expo install <pkg>` so its version matches SDK 54. Never run `npm install` for an `expo-*` or `react-native-*` package. |
+| D2 | SDK pinning | Expo **SDK 58**, the version supported by Expo Go in the App Store (iOS Expo Go runs only the latest SDK; the project moved from SDK 54 to 58 in November 2026 for this reason). Every native-related package MUST be added with `npx expo install <pkg>` so its version matches SDK 58. Never run `npm install` for an `expo-*` or `react-native-*` package. |
 | D3 | Testability boundary | Code in `src/domain`, `src/db/` (except `expoDb.ts`), `src/repos`, `src/services` MUST NOT import `react-native`, `expo-*` or React. Platform APIs reach them only through the interfaces in §5.2 (`Db`, `Notifier`, `Clock`). This lets all logic be tested in Node. |
 | D4 | Test runner | **Vitest** (Node environment) for domain, repositories and services. Repositories are tested against **sql.js** (SQLite compiled to WebAssembly, no native build — works on Windows) through a test adapter implementing `Db`. No component/UI tests in v1; UI criteria are verified manually (§9). |
 | D5 | Money-like units | Weight stored as **integer centi-kilograms** (`weight_cg`, 102.5 kg → `10250`). Never floats in the database. Conversion only in `src/domain/weight.ts`. |
@@ -393,7 +393,7 @@ Both agents in the pipeline MUST run `typecheck`, `lint`, `test` and `build` (wh
 
 Each numbered step is **one run of the pipeline**: `/implement zdvih-design.md <step>`. A run implements only its step, treats earlier steps as present, and MUST leave all commands of §9 green.
 
-1. **Scaffold, device check & domain.** Create the Expo SDK 54 app at the repo root (TypeScript template, Expo Router), `strict` TS, scripts and ESLint config of §9, Vitest config, folder skeleton of §5.1, `src/config.ts`, `src/strings.ts`, `src/domain/*` except the detector. Install `expo-sqlite expo-sensors expo-notifications expo-keep-awake react-native-svg` with `npx expo install`. Add the dev-check screen (D18). Unit tests for weight, reps, names, e1RM, volume, time. **Human checkpoint:** open the dev-check screen on the iPhone and confirm all five capabilities before step 2.
+1. **Scaffold, device check & domain.** Create the Expo SDK 58 app at the repo root (TypeScript template, Expo Router), `strict` TS, scripts and ESLint config of §9, Vitest config, folder skeleton of §5.1, `src/config.ts`, `src/strings.ts`, `src/domain/*` except the detector. Install `expo-sqlite expo-sensors expo-notifications expo-keep-awake react-native-svg` with `npx expo install`. Add the dev-check screen (D18). Unit tests for weight, reps, names, e1RM, volume, time. **Human checkpoint:** open the dev-check screen on the iPhone and confirm all five capabilities before step 2.
 2. **Database.** `Db` interface, `expoDb.ts`, `tests/support/sqljsDb.ts`, migrations + seed + settings table. Exercise repo/service (E1–E3). Tests 4.1a, 4.1b, 4.2a–c.
 3. **Workout & set services.** `ports.ts`, fakes, workoutService (W1–W4, S3–S5, R1–R2, `progress`). Tests for 1.1–1.5 (service parts), 2.x, 5.1a, 5.2a, 5.3a, 5.4a.
 4. **Rest service & detector.** `restService` (T1–T5), `pickupDetector`. Tests for 3.x (service and unit parts).
@@ -409,11 +409,11 @@ After steps 5–9 the human runs the manual checks of §8 on the iPhone.
 
 | # | Risk | Mitigation / decision |
 |---|---|---|
-| R1 | Expo Go in the App Store supports only SDK 54; an agent may install newer package versions or use newer APIs. | D2: `npx expo install` only; CLAUDE.md repeats it; `expo-doctor` may be run by the human when dependencies change. |
+| R1 | Expo Go in the App Store supports only the latest SDK (58 as of November 2026); when Expo releases a newer SDK, the App Store build stops opening this project until it is upgraded; an agent may install newer package versions or use newer APIs. | D2: `npx expo install` only; CLAUDE.md repeats it; `expo-doctor` may be run by the human when dependencies change. |
 | R2 | Accelerometer works only with the app open and the screen on. | Keep-awake during an active workout (1.4a); higher battery use accepted. |
 | R3 | Thresholds for "still" and "pickup" depend on the phone and surface (bench, floor). | Values in `src/config.ts`, tuned manually on the iPhone in step 7; the 10-second rule is fixed by SPEC. |
 | R4 | sql.js in tests and expo-sqlite on the phone may differ in edge behaviour; `expoDb.ts` itself has no automated tests. | Only standard SQLite features (partial and expression indexes exist since SQLite 3.8/3.9); `PRAGMA foreign_keys` set by both adapters; no reliance on cascades (D17); serialised access (D16); dev-check write/read after step 1 and a full manual run after step 5. |
-| R10 | Library docs consulted while writing this document partly showed newer SDK pages; SDK 54 details (notification trigger shape, handler fields) may differ slightly. | Packages pinned by `npx expo install`; TypeScript types of the installed versions are authoritative; the dev-check screen (D18) proves each capability on the phone before features depend on it. |
+| R10 | Library docs consulted while writing this document partly showed newer SDK pages; SDK 58 details (notification trigger shape, handler fields) may differ slightly. | Packages pinned by `npx expo install`; TypeScript types of the installed versions are authoritative; the dev-check screen (D18) proves each capability on the phone before features depend on it. |
 | R5 | User denies notification permission. | Timers still work in the app; one-time hint (T6). |
 | R6 | iOS may kill the app in the background. | All timer state is persisted (D10); the scheduled notifications are owned by iOS and still fire. |
 | R7 | Vibration in the gym may be missed. | Accepted for v1; the countdown is also visible on screen. |

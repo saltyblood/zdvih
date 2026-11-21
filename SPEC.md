@@ -132,7 +132,7 @@ Numbered by function. Each criterion is a yes/no check.
 
 ## 7. Constraints
 
-- React Native with Expo **SDK 54**, TypeScript; must run in the App Store version of Expo Go on iPhone.
+- React Native with Expo **SDK 58**, TypeScript; must run in the App Store version of Expo Go on iPhone.
 - Data stored only on the device (SQLite).
 - UI language English; weight unit kg; dates and times in the phone's local time zone.
 - Usable with one hand on a phone screen.

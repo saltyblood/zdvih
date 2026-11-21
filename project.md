@@ -57,7 +57,7 @@ Every built-in exercise is loaded with external weight, so weight is always grea
 
 | Area | Choice | Reason |
 |---|---|---|
-| Framework | React Native with Expo, **SDK 54**, TypeScript | Development on Windows, testing on a real iPhone through Expo Go. SDK 54 is the version the App Store build of Expo Go supports. |
+| Framework | React Native with Expo, **SDK 58**, TypeScript | Development on Windows, testing on a real iPhone through Expo Go. SDK 58 is the version the App Store build of Expo Go supports (it runs only the latest SDK; the project moved from SDK 54 in November 2026). |
 | Storage | `expo-sqlite` (local SQLite database) | Offline, relational data (workouts → sets → exercises), no backend. |
 | Sensors | `expo-sensors` (accelerometer) | Detect that the phone was put down to start the rest timer. |
 | Feedback | `expo-haptics`, `expo-notifications` (local notifications) | Signal the end of rest, also when the screen is locked. |
