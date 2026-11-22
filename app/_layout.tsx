@@ -87,6 +87,10 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerTransparent: false }}>
         <Stack.Screen name="index" options={{ title: strings.appName }} />
         <Stack.Screen name="workout" options={{ title: strings.workout.title }} />
+        <Stack.Screen
+          name="log-set"
+          options={{ title: strings.logSet.titleAdd, presentation: 'modal' }}
+        />
         <Stack.Screen name="dev-check" options={{ title: strings.devCheck.title }} />
       </Stack>
       <StatusBar style="auto" />
