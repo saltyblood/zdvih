@@ -77,6 +77,39 @@ describe('migrations', () => {
     expect(await db.first('SELECT * FROM settings')).toBeNull();
   });
 
+  it('FIFO: an outer call issued before a failing concurrent transaction survives', async () => {
+    const results = await Promise.allSettled([
+      db.run("INSERT INTO settings (key, value) VALUES ('outer', 'x')"),
+      db.transaction(async (tx) => {
+        await tx.run("INSERT INTO settings (key, value) VALUES ('tx', 'y')");
+        throw new Error('boom');
+      }),
+    ]);
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'rejected']);
+    const keys = await db.all<{ key: string }>('SELECT key FROM settings ORDER BY key');
+    expect(keys).toEqual([{ key: 'outer' }]);
+  });
+
+  it('FIFO: calls run in issue order and a later call waits for the transaction', async () => {
+    const order: string[] = [];
+    await Promise.all([
+      db.transaction(async (tx) => {
+        order.push('tx-start');
+        await tx.run("INSERT INTO settings (key, value) VALUES ('a', '1')");
+        await new Promise((r) => setTimeout(r, 5));
+        order.push('tx-end');
+      }),
+      db.first("SELECT 1").then(() => order.push('first')),
+      db
+        .first<{ n: number }>('SELECT count(*) AS n FROM settings')
+        .then((r) => order.push(`count-${r?.n}`)),
+      db.transaction(async () => {
+        order.push('tx2');
+      }),
+    ]);
+    expect(order).toEqual(['tx-start', 'tx-end', 'first', 'count-1', 'tx2']);
+  });
+
   it('D16: nested tx.transaction joins the outer transaction', async () => {
     await db.transaction(async (tx) => {
       await tx.transaction(async (inner) => {

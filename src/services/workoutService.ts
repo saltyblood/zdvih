@@ -8,7 +8,7 @@ import type { Db } from '../db/db';
 import { createExerciseRepo } from '../repos/exerciseRepo';
 import { createSetRepo, type SetRow, type SetWithExerciseRow } from '../repos/setRepo';
 import { createWorkoutRepo, type WorkoutRow } from '../repos/workoutRepo';
-import { strings } from '../strings';
+import { safeCancel, touch as touchActivity } from './activity';
 import type { Clock, Notifier } from './ports';
 
 export interface ActiveWorkout extends WorkoutRow {
@@ -67,26 +67,8 @@ export function createWorkoutService({
   const sets = createSetRepo(db);
   const exercises = createExerciseRepo(db);
 
-  /**
-   * R1: record activity. Cancels the pending reminder, schedules a new one and stores
-   * its id. Never called from inside a transaction (it uses the outer handle).
-   */
-  async function touch(workoutId: number): Promise<void> {
-    const now = clock.now();
-    const w = await db.first<{ reminder_notification_id: string | null }>(
-      'SELECT reminder_notification_id FROM workouts WHERE id = ? AND finished_at IS NULL',
-      [workoutId],
-    );
-    if (!w) return;
-    if (w.reminder_notification_id) await notifier.cancel(w.reminder_notification_id);
-    const id = await notifier.schedule(
-      'reminder',
-      REMINDER_SECONDS,
-      strings.notifications.reminderTitle,
-      strings.notifications.reminderBody,
-    );
-    await workouts.setActivity(workoutId, now, id);
-  }
+  /** R1/R3: shared activity helper (after the activity's transaction committed). */
+  const touch = () => touchActivity({ db, notifier, clock, reminderSeconds: REMINDER_SECONDS });
 
   async function requireActive(): Promise<WorkoutRow> {
     const w = await workouts.findActive();
@@ -102,31 +84,61 @@ export function createWorkoutService({
 
   /** W1 */
   async function startWorkout(): Promise<WorkoutRow> {
-    if (await workouts.findActive()) throw new AppError('WORKOUT_ALREADY_ACTIVE');
     const now = clock.now();
-    const id = await db.transaction((tx) => createWorkoutRepo(tx).insertActive(now));
-    await touch(id);
+    try {
+      await db.transaction(async (tx) => {
+        const txWorkouts = createWorkoutRepo(tx);
+        if (await txWorkouts.findActive()) throw new AppError('WORKOUT_ALREADY_ACTIVE');
+        await txWorkouts.insertActive(now);
+      });
+    } catch (e) {
+      // concurrent start: ux_workouts_one_active rejected the insert
+      // SQLite message: "UNIQUE constraint failed: index 'ux_workouts_one_active'"
+      const msg = String((e as Error)?.message ?? '');
+      if (
+        !(e instanceof AppError) &&
+        msg.includes('UNIQUE constraint failed') &&
+        msg.includes('ux_workouts_one_active')
+      ) {
+        throw new AppError('WORKOUT_ALREADY_ACTIVE');
+      }
+      throw e;
+    }
+    await touch();
     return (await workouts.findActive()) as WorkoutRow;
   }
 
   /** W2 */
   async function finishWorkout(): Promise<FinishResult> {
     const w = await requireActive();
-    // Notifications are cancelled before the transaction.
-    if (w.rest_notification_id) await notifier.cancel(w.rest_notification_id);
-    if (w.reminder_notification_id) await notifier.cancel(w.reminder_notification_id);
+    // N2: cancel the stored ids first (N3: failures ignored)
+    const cancelled = new Set<string>();
+    for (const id of [w.rest_notification_id, w.reminder_notification_id]) {
+      if (id) {
+        cancelled.add(id);
+        await safeCancel(notifier, id);
+      }
+    }
     const now = clock.now();
-    const discarded = await db.transaction(async (tx) => {
+    // N2: re-read the ids inside the transaction, then write
+    const { discarded, txIds } = await db.transaction(async (tx) => {
       const txSets = createSetRepo(tx);
       const txWorkouts = createWorkoutRepo(tx);
+      const cur = await txWorkouts.findActive();
+      if (!cur || cur.id !== w.id) throw new AppError('NO_ACTIVE_WORKOUT');
+      const ids = [cur.rest_notification_id, cur.reminder_notification_id];
       if ((await txSets.countByWorkout(w.id)) === 0) {
         await txSets.removeByWorkout(w.id);
         await txWorkouts.remove(w.id);
-        return true;
+        return { discarded: true, txIds: ids };
       }
       await txWorkouts.markFinished(w.id, now);
-      return false;
+      return { discarded: false, txIds: ids };
     });
+    // N2: cancel ids that a concurrent N1 stored in between
+    for (const id of txIds) {
+      if (id && !cancelled.has(id)) await safeCancel(notifier, id);
+    }
     return { workoutId: w.id, discarded };
   }
 
@@ -146,7 +158,7 @@ export function createWorkoutService({
       const position = await txSets.nextPosition(w.id);
       return txSets.insert(w.id, exerciseId, weight, reps, position, now);
     });
-    await touch(w.id);
+    await touch();
     return (await sets.findById(id)) as SetRow;
   }
 
@@ -161,7 +173,7 @@ export function createWorkoutService({
     const weight = parseWeight(weightInput);
     const reps = parseReps(repsInput);
     await db.transaction((tx) => createSetRepo(tx).update(setId, weight, reps));
-    await touch(existing.workout_id);
+    await touch();
     return (await sets.findById(setId)) as SetRow;
   }
 
@@ -170,7 +182,7 @@ export function createWorkoutService({
     const existing = await sets.findInActive(setId);
     if (!existing) throw new AppError('NOT_FOUND');
     await db.transaction((tx) => createSetRepo(tx).remove(setId));
-    await touch(existing.workout_id);
+    await touch();
   }
 
   /** S5 */

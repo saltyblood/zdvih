@@ -39,11 +39,52 @@ export function createWorkoutRepo(db: Db) {
       ]);
       return r.lastInsertRowId;
     },
-    async setActivity(id: number, now: number, reminderId: string | null): Promise<void> {
-      await db.run(
-        'UPDATE workouts SET last_activity_at = ?, reminder_notification_id = ? WHERE id = ?',
-        [now, reminderId, id],
+    /**
+     * N1 conditional replace of the reminder id. Returns false when the workout was
+     * finished/deleted or another call replaced the id first (nothing written).
+     */
+    async replaceReminder(
+      id: number,
+      now: number,
+      newId: string | null,
+      oldId: string | null,
+    ): Promise<boolean> {
+      const r = await db.run(
+        `UPDATE workouts SET last_activity_at = ?, reminder_notification_id = ?
+          WHERE id = ? AND finished_at IS NULL AND reminder_notification_id IS ?`,
+        [now, newId, id, oldId],
       );
+      return r.changes > 0;
+    },
+    /** N3: only the timestamp (schedule failed, the old id stays stored). */
+    async setLastActivity(id: number, now: number): Promise<void> {
+      await db.run(
+        'UPDATE workouts SET last_activity_at = ? WHERE id = ? AND finished_at IS NULL',
+        [now, id],
+      );
+    },
+    /** N1 conditional replace of the rest state (T1). */
+    async replaceRest(
+      id: number,
+      next: { endsAt: number | null; notificationId: string | null },
+      prev: { endsAt: number | null; notificationId: string | null },
+    ): Promise<boolean> {
+      const r = await db.run(
+        `UPDATE workouts SET rest_ends_at = ?, rest_notification_id = ?
+          WHERE id = ? AND finished_at IS NULL
+            AND rest_notification_id IS ? AND rest_ends_at IS ?`,
+        [next.endsAt, next.notificationId, id, prev.notificationId, prev.endsAt],
+      );
+      return r.changes > 0;
+    },
+    /** N2 / T2 / T4 / T5: clear the rest state, optionally only when it has expired. */
+    async clearRest(id: number, expectedEndsAt: number | null): Promise<boolean> {
+      const r = await db.run(
+        `UPDATE workouts SET rest_ends_at = NULL, rest_notification_id = NULL
+          WHERE id = ? AND finished_at IS NULL AND rest_ends_at IS ?`,
+        [id, expectedEndsAt],
+      );
+      return r.changes > 0;
     },
     async markFinished(id: number, now: number): Promise<void> {
       await db.run(

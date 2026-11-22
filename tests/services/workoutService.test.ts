@@ -62,6 +62,33 @@ describe('start (1.1a, 1.1b)', () => {
       db.run('INSERT INTO workouts (started_at, last_activity_at) VALUES (1, 1)'),
     ).rejects.toThrow();
   });
+
+  it('W1 maps only the ux_workouts_one_active violation; other constraint errors propagate', async () => {
+    const failing = (message: string): Db => ({
+      ...db,
+      transaction: (fn) =>
+        db.transaction((tx) =>
+          fn({
+            ...tx,
+            run: async () => {
+              throw new Error(message);
+            },
+          }),
+        ),
+    });
+    const other = createWorkoutService({
+      db: failing('NOT NULL constraint failed: workouts.started_at'),
+      notifier,
+      clock,
+    });
+    await expect(other.startWorkout()).rejects.toThrow(/NOT NULL constraint failed/);
+    const mapped = createWorkoutService({
+      db: failing("UNIQUE constraint failed: index 'ux_workouts_one_active'"),
+      notifier,
+      clock,
+    });
+    expect(await code(mapped.startWorkout())).toBe('WORKOUT_ALREADY_ACTIVE');
+  });
 });
 
 describe('finish (1.2a, 1.2b)', () => {
