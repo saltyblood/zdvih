@@ -10,15 +10,8 @@ import { strings } from '@/src/strings';
 
 const KEEP_AWAKE_TAG = 'dev-check';
 
-// Show notifications as banners while this dev screen is open, so the check is visible.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// The app-wide notification handler (D11) lives in src/platform/expoNotifier.ts and is installed
+// by app/_layout.tsx. Notifications without data.kind (like the one below) are shown as a banner.
 
 export default function DevCheckRoute() {
   if (!__DEV__) return <Redirect href="/" />;

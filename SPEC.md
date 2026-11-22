@@ -82,7 +82,7 @@ Numbered by function. Each criterion is a yes/no check.
 - **1.2b** A workout with zero sets is discarded on finish and does not appear in history.
 - **1.3a** If the app is closed (or killed) during a workout and reopened, the same workout is active with all its sets.
 - **1.4a** While a workout is active and the app is open, the screen does not lock automatically; after the workout is finished, the normal auto-lock applies again.
-- **1.5a** If an active workout has no activity for 30 minutes, a notification "Your workout is still open" is shown.
+- **1.5a** If an active workout has no activity for 30 minutes, a notification "Your workout is still open" is shown (with sound when the app is in the background or the screen is locked).
 - **1.5b** Any activity resets the 30-minute period; the reminder is shown at most once per inactivity period.
 - **1.5c** The reminder does not finish the workout; it stays active until the user finishes it, and its duration includes the whole time.
 - **1.5d** Finishing the workout cancels the pending reminder.
