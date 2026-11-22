@@ -105,8 +105,8 @@ Numbered by function. Each criterion is a yes/no check.
 - **3.1e** No countdown starts automatically when no workout is active.
 - **3.2a** The "Start rest" button starts the same 180-second countdown at any time during an active workout; if a countdown is running, it restarts from 180 s.
 - **3.3a** A "Stop" button ends the countdown; no vibration or notification follows.
-- **3.4a** When the countdown reaches 0 with the app open, the phone vibrates.
-- **3.4b** When the countdown reaches 0 with the app in the background or the screen locked, a notification "Rest is over" is shown.
+- **3.4a** When the countdown reaches 0 with the app open, the phone vibrates and the notification "Rest is over" is shown as a banner, without sound.
+- **3.4b** When the countdown reaches 0 with the app in the background or the screen locked, a notification "Rest is over" is shown with sound (and vibration, as the phone's sound and haptics settings allow).
 - **3.4c** Stopping or restarting a countdown cancels its pending notification, so no stale notification appears.
 - **3.4d** If notification permission is denied, the countdown still works inside the app, and the user sees a one-time hint explaining that alerts with a locked screen are off.
 - **3.4e** The remaining time stays correct after the app returns from the background (it is computed from the end time, not counted in the background).

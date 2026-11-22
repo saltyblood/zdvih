@@ -75,16 +75,20 @@ export function createRestService({
   }
 
   /**
-   * N2: clear the rest state. With `onlyExpired` (T4/T5) nothing happens unless
-   * rest_ends_at <= now. Returns true when this call cleared a rest.
+   * Clear the rest state. Returns true when this call cleared a rest.
+   * - T2 (`onlyExpired = false`): N2, the stored notification is cancelled.
+   * - T4/T5 (`onlyExpired = true`): only when rest_ends_at <= now, and the stored
+   *   notification is kept so it is still delivered (foreground banner, D11, 3.4a).
+   *   The conditional clear inside the transaction leaves a concurrently restarted
+   *   rest (rest_ends_at > now) untouched, so no stale notification can survive.
    */
   async function clear(onlyExpired: boolean): Promise<boolean> {
     const before = await workouts.findActive();
     if (!before || before.rest_ends_at === null) return false;
     if (onlyExpired && before.rest_ends_at > clock.now()) return false;
 
-    // N2: cancel the stored id first
-    const cancelledId = before.rest_notification_id;
+    // N2: cancel the stored id first (T2 only)
+    const cancelledId = onlyExpired ? null : before.rest_notification_id;
     if (cancelledId) await safeCancel(notifier, cancelledId);
 
     // N2: re-read inside the transaction, then write
@@ -97,8 +101,8 @@ export function createRestService({
       return { cleared: true, id: cur.rest_notification_id };
     });
 
-    // N2: cancel an id a concurrent N1 stored in between
-    if (txId.id && txId.id !== cancelledId) await safeCancel(notifier, txId.id);
+    // N2: cancel an id a concurrent N1 stored in between (T2 only)
+    if (!onlyExpired && txId.id && txId.id !== cancelledId) await safeCancel(notifier, txId.id);
     return txId.cleared;
   }
 
@@ -119,12 +123,12 @@ export function createRestService({
     return Math.max(0, Math.ceil((w.rest_ends_at - clock.now()) / 1000));
   }
 
-  /** T5: app returned to the foreground; an expired rest is cleared silently. */
+  /** T5: app returned to the foreground; an expired rest is cleared silently, notification kept. */
   async function onForeground(): Promise<void> {
     await clear(true);
   }
 
-  /** T4: state clearing only; the caller vibrates. Returns true if a rest was cleared. */
+  /** T4: state clearing only (notification kept); the caller vibrates. Returns true if a rest was cleared. */
   async function onTickReachedZero(): Promise<boolean> {
     return clear(true);
   }

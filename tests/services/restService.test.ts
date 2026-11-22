@@ -210,6 +210,7 @@ describe('remaining / T4 / T5 (3.4e)', () => {
   it('3.4e T5: onForeground with an expired rest clears it silently', async () => {
     await work.startWorkout();
     await rest.startRest();
+    const restId = (await state())?.rest_notification_id;
     clock.advance((REST + 10) * SEC);
     const scheduledBefore = notifier.scheduled.length;
     await rest.onForeground();
@@ -217,6 +218,8 @@ describe('remaining / T4 / T5 (3.4e)', () => {
     expect(s?.rest_ends_at).toBeNull();
     expect(s?.rest_notification_id).toBeNull();
     expect(notifier.scheduled.length).toBe(scheduledBefore); // nothing new, no vibration hook here
+    // D11 / 3.4b: the rest notification is not cancelled; it is (or was) still delivered
+    expect(notifier.cancelled).not.toContain(restId);
   });
 
   it('T5: onForeground with a running rest keeps it', async () => {
@@ -241,6 +244,28 @@ describe('remaining / T4 / T5 (3.4e)', () => {
     expect(await rest.onTickReachedZero()).toBe(true);
     expect((await state())?.rest_ends_at).toBeNull();
     expect(await rest.onTickReachedZero()).toBe(false);
+  });
+
+  it('3.4a T4: clearing at zero keeps the rest notification so the foreground banner shows', async () => {
+    await work.startWorkout();
+    await rest.startRest();
+    const restId = (await state())?.rest_notification_id;
+    expect(restId).toBeTruthy();
+    clock.advance(REST * SEC);
+    expect(await rest.onTickReachedZero()).toBe(true);
+    expect((await state())?.rest_notification_id).toBeNull();
+    expect(notifier.cancelled).not.toContain(restId);
+    expect(notifier.pending('rest').map((n) => n.id)).toContain(restId);
+  });
+
+  it('3.3a T2: stopRest still cancels the rest notification', async () => {
+    await work.startWorkout();
+    await rest.startRest();
+    const restId = (await state())?.rest_notification_id;
+    clock.advance(30 * SEC);
+    await rest.stopRest();
+    expect(notifier.cancelled).toContain(restId);
+    expect(notifier.pending('rest')).toHaveLength(0);
   });
 });
 
