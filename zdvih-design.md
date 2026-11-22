@@ -123,8 +123,8 @@ Display names of muscle groups: Chest, Back, Shoulders, Biceps, Triceps, Quads, 
 ## 4. Business rules (authoritative list)
 
 ### 4.1 Workouts
-- **W1.** `startWorkout()` fails with `WORKOUT_ALREADY_ACTIVE` if an active workout exists (1.1b). Sets `started_at = last_activity_at = now`. Counts as activity (schedules the reminder, R1).
-- **W2.** `finishWorkout()` cancels the rest notification and the reminder notification, then: if the workout has 0 sets → **delete the row** (1.2b); else set `finished_at = now`, `rest_ends_at = NULL`, notification ids = NULL (1.2a, 1.5d). Runs in one transaction (notifications cancelled before it).
+- **W1.** `startWorkout()` fails with `WORKOUT_ALREADY_ACTIVE` if an active workout exists (1.1b). Sets `started_at = last_activity_at = now`. Counts as activity (schedules the reminder, R1). The check and the insert run in one transaction; a unique-index violation on `ux_workouts_one_active` (concurrent start, e.g. a double tap) is mapped to `WORKOUT_ALREADY_ACTIVE`.
+- **W2.** `finishWorkout()` cancels the rest notification and the reminder notification, then: if the workout has 0 sets → **delete the row** (1.2b); else set `finished_at = now`, `rest_ends_at = NULL`, notification ids = NULL (1.2a, 1.5d). Runs in one transaction (notifications cancelled before it, and again after it per N2).
 - **W3.** `deleteWorkout(id)` only for finished workouts (`NOT_FOUND` otherwise); in one transaction deletes its sets explicitly, then the workout (D17) (5.4a). The same explicit delete is used by W2 for an empty workout. UI asks for confirmation.
 - **W4.** History: finished workouts ordered `started_at DESC` with `set_count` and `volume_cg` (5.1a).
 
@@ -152,6 +152,15 @@ Display names of muscle groups: Chest, Back, Shoulders, Biceps, Triceps, Quads, 
 ### 4.5 Inactivity reminder
 - **R1.** Every activity (W1, S3, S4, T1, T2) calls `touch(now)`: set `last_activity_at = now`, cancel the pending reminder notification, schedule a new one after `REMINDER_SECONDS` (1800) `{kind:'reminder', title:'Your workout is still open', body:'Finish it or keep logging.'}`, store its id (1.5a, 1.5b).
 - **R2.** The reminder never changes the workout (1.5c). W2 cancels it (1.5d).
+- **R3.** `touch` lives in `src/services/activity.ts` as a plain exported function `touch({ db, notifier, clock, reminderSeconds })`, shared by `workoutService` (W1, S3, S4) and `restService` (T1, T2); neither service keeps its own copy. It is called after the activity's transaction has committed, never inside `transaction(fn)` (D16), and follows N1 and N3.
+
+### 4.5a Notification id consistency
+Notifier calls cannot be part of a SQL transaction, and service calls can overlap (e.g. `onPickup` fires on its own while the user taps Finish). The stored notification ids (`reminder_notification_id`, `rest_notification_id`) therefore follow these rules; no global lock is used.
+- **N1. Replacing an id** (R1 `touch`, T1 `startRest`): (1) read the active workout and the currently stored id `old` (no active workout → return); (2) schedule the new notification → `new` (may be `null`, T6); (3) conditional write `UPDATE workouts SET <col> = :new, … WHERE id = :id AND finished_at IS NULL AND <col> IS :old`; (4) if `changes = 0` (the workout was finished, or another call replaced the id first) → cancel `new` and stop; else cancel `old` if not null. Result: at most one pending notification of each kind per active workout, and never a pending one for a finished workout. For `touch`, `last_activity_at` is written in the same conditional UPDATE; a lost race only loses a timestamp a few ms old, which is accepted. For T1, the rest columns (`rest_ends_at`, `rest_notification_id`) are written in the same conditional UPDATE.
+- **N2. Clearing ids** (W2 finish, T2 stop, T4/T5 clearing): cancel the stored ids first (so a crash right after leaves no stray notification); then, inside the transaction, re-read the ids and write NULL/finish; after commit cancel any id read inside the transaction that differs from the one cancelled before (a concurrent N1 won in between).
+- **N3. Notifier failures never fail a committed mutation.** Inside `touch` (and the notification part of T1/T2 that follows a committed write) errors from `notifier.schedule`/`cancel` are caught: on a failed `schedule` treat `new` as `null` but keep the old id stored (still write `last_activity_at`); a failed `cancel` is ignored. The service call then resolves normally, so the UI never reports an error for a set that was saved (prevents duplicate sets on retry).
+- **Residual risk (accepted):** if iOS kills the app between step (2) and step (3) of N1, the new notification is scheduled but not stored and cannot be cancelled by W2; it fires once at most (a reminder 30 min later or a rest alert). Not reachable in tests.
+- **Tests** (service, with fakes): two concurrent `touch` calls (`Promise.all`) → exactly one pending reminder and its id is the stored one; `touch` overlapping `finishWorkout` → no pending reminder, finished row has NULL ids; FakeNotifier `schedule` throwing → `addSet` resolves and the set exists; double `startWorkout` via `Promise.all` → one workout and one `WORKOUT_ALREADY_ACTIVE`. The sql.js adapter's D16 guard throws on outer-handle calls while a transaction is open; these tests must interleave calls between transactions (e.g. a FakeNotifier with an awaitable/delayed `schedule`), not inside one.
 
 ### 4.6 Error codes
 `WORKOUT_ALREADY_ACTIVE`, `NO_ACTIVE_WORKOUT`, `NOT_FOUND`, `WEIGHT_INVALID`, `REPS_INVALID`, `NAME_INVALID`, `EXERCISE_EXISTS`, `EXERCISE_BUILTIN`, `EXERCISE_IN_USE`. Thrown as `AppError(code)` from `src/domain/errors.ts`; mapped to English text in `src/strings.ts`.
@@ -184,6 +193,7 @@ src/
     exerciseRepo.ts  workoutRepo.ts  setRepo.ts
   services/
     ports.ts                  # Notifier, Clock interfaces
+    activity.ts               # touch() — R1, R3, N1, N3 (shared by both services)
     workoutService.ts         # W1–W4, S3–S5, R1–R2
     restService.ts            # T1–T2, T5 decision logic
     exerciseService.ts        # E1–E3
@@ -396,7 +406,7 @@ Each numbered step is **one run of the pipeline**: `/implement zdvih-design.md <
 1. **Scaffold, device check & domain.** Create the Expo SDK 58 app at the repo root (TypeScript template, Expo Router), `strict` TS, scripts and ESLint config of §9, Vitest config, folder skeleton of §5.1, `src/config.ts`, `src/strings.ts`, `src/domain/*` except the detector. Install `expo-sqlite expo-sensors expo-notifications expo-keep-awake react-native-svg` with `npx expo install`. Add the dev-check screen (D18). Unit tests for weight, reps, names, e1RM, volume, time. **Human checkpoint:** open the dev-check screen on the iPhone and confirm all five capabilities before step 2.
 2. **Database.** `Db` interface, `expoDb.ts`, `tests/support/sqljsDb.ts`, migrations + seed + settings table. Exercise repo/service (E1–E3). Tests 4.1a, 4.1b, 4.2a–c.
 3. **Workout & set services.** `ports.ts`, fakes, workoutService (W1–W4, S3–S5, R1–R2, `progress`). Tests for 1.1–1.5 (service parts), 2.x, 5.1a, 5.2a, 5.3a, 5.4a.
-4. **Rest service & detector.** `restService` (T1–T5), `pickupDetector`. Tests for 3.x (service and unit parts).
+4. **Rest service & detector.** First move `touch` out of `workoutService` into `src/services/activity.ts` (R3) and bring the step-3 code in line with §4.5a (N1–N3) and the W1 double-start mapping, with the §4.5a tests. Then `restService` (T1–T5, using `activity.touch` and N1/N2 for the rest id), `pickupDetector`. Tests for 3.x (service and unit parts). Existing step-3 tests must keep passing.
 5. **App shell.** `expoNotifier.ts`, `systemClock.ts`, `_layout.tsx` (DB open, migrations, notification handler D11), `ActiveWorkoutContext`, Home, Active workout screen (sets list, Finish), `WorkoutRuntime` with keep-awake and AppState (no accelerometer yet).
 6. **Log set.** Log/edit set screen with picker, previous sets, prefill, validation, delete.
 7. **Rest UI & sensors.** `RestBar`, countdown tick + vibration (T4), accelerometer wiring to the detector, permission request (D14) and hint (T6), D13 overrides.
