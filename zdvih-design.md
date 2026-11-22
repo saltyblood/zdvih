@@ -147,7 +147,7 @@ Display names of muscle groups: Chest, Back, Shoulders, Biceps, Triceps, Quads, 
 - **T2.** `stopRest()`: cancel notification, clear `rest_ends_at` and id (3.3a). Activity. With no rest running (or no active workout) it is a no-op and does not count as activity.
 - **T3.** Automatic start: on a `pickup` event from the detector (§5.5), call `startRest` **only if** a workout is active and no rest is running (3.1a, 3.1b, 3.1e).
 - **T4.** Countdown end while the app is active: when the tick observes remaining time crossing from > 0 to 0, call `Vibration.vibrate()` once and clear the rest state **without cancelling** the stored rest notification: it is due at (about) this moment and must still be shown as the foreground banner (D11, 3.4a); the tick usually runs a few ms before iOS delivers it. `onTickReachedZero()` returns `true` only when it actually cleared a rest; the caller vibrates only then.
-- **T5.** App returns to foreground with `rest_ends_at ≤ now`: clear the rest state **silently**, without vibration and **without cancelling** the stored rest notification (it was already shown, 3.4b, or is due right now and should still be shown). With `rest_ends_at > now`: the countdown simply continues from the stored end time (3.4e).
+- **T5.** App returns to foreground with `rest_ends_at ≤ now`: clear the rest state **silently**, without vibration and **without cancelling** the stored rest notification (it was already shown, 3.4b, or is due right now and should still be shown). With `rest_ends_at > now`: the countdown simply continues from the stored end time (3.4e). **Cold start counts as returning to the foreground:** `AppState` emits no `active` change when the app is launched from scratch (e.g. after iOS killed it), so `WorkoutRuntime` MUST also call `restService.onForeground()` once on mount (after the services are ready, before the first T4 tick), then `refresh()`. An expired rest found at launch is thus cleared silently and never triggers the T4 vibration.
 - **T6.** If notification permission is denied: T1/T2 still work; scheduling is skipped (id NULL); the active-workout screen shows a one-time hint "Rest alerts are off while the screen is locked. Enable notifications in Settings." The "already shown" flag is stored in the `settings` table, `key = 'notif_hint_shown'` (3.4d).
 
 ### 4.5 Inactivity reminder
@@ -322,7 +322,7 @@ Algorithm: `delta = |s − previous|` (Euclidean norm of the difference of conse
 
 ### 6.3 WorkoutRuntime (root, D12)
 
-While `active != null`: `useKeepAwake()` (1.4a — unmounting it restores auto-lock after finish); accelerometer → detector → `restService.onPickup()`; a 250 ms interval that detects the crossing to 0 (T4 → `Vibration.vibrate()`); `AppState` listener: `background` → `detector.reset()`, `active` → `restService.onForeground()` then `refresh()`.
+While `active != null`: `useKeepAwake()` (1.4a — unmounting it restores auto-lock after finish); accelerometer → detector → `restService.onPickup()`; a 250 ms interval that detects the crossing to 0 (T4 → `Vibration.vibrate()`) — it vibrates only if an earlier tick of the same running rest saw remaining > 0, never on the first tick after mount or after returning from the background; `AppState` listener: `background` → `detector.reset()`, `active` → `restService.onForeground()` then `refresh()`; on mount (cold start) the same `onForeground()` then `refresh()` runs once (T5).
 
 ## 7. Test strategy
 
@@ -410,7 +410,7 @@ Each numbered step is **one run of the pipeline**: `/implement zdvih-design.md <
 4. **Rest service & detector.** First move `touch` out of `workoutService` into `src/services/activity.ts` (R3) and bring the step-3 code in line with §4.5a (N1–N3) and the W1 double-start mapping, with the §4.5a tests. Then `restService` (T1–T5, using `activity.touch` and N1/N2 for the rest id), `pickupDetector`. Tests for 3.x (service and unit parts). Existing step-3 tests must keep passing.
 5. **App shell.** `expoNotifier.ts`, `systemClock.ts`, `_layout.tsx` (DB open, migrations, notification handler D11), `ActiveWorkoutContext`, Home, Active workout screen (sets list, Finish), `WorkoutRuntime` with keep-awake and AppState (no accelerometer yet).
 6. **Log set.** Log/edit set screen with picker, previous sets, prefill, validation, delete.
-7. **Rest UI & sensors.** `RestBar`, countdown tick + vibration (T4), accelerometer wiring to the detector, permission request (D14) and hint (T6), D13 overrides.
+7. **Rest UI & sensors.** `RestBar`, countdown tick + vibration (T4), the cold-start `onForeground()` call (T5, §6.3), accelerometer wiring to the detector, permission request (D14) and hint (T6), D13 overrides.
 8. **Exercises, progress, history.** Exercise list/add/delete, `LineChart`, progress screen, history list/detail/delete.
 9. **Polish.** Empty states, confirmation dialogs review, run the G.a grep, update `README.md` with how to run on a phone.
 
