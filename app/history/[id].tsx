@@ -70,7 +70,6 @@ export default function HistoryDetailScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}

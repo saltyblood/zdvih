@@ -42,12 +42,17 @@ export function ActiveWorkoutProvider({
   const [loadFailed, setLoadFailed] = useState(false);
   const { workoutService } = services;
 
-  /** Never rejects: on failure the previous state is kept (initial load failure shows a retry screen). */
+  /**
+   * Never rejects. On failure the state is dropped (active = undefined) so the provider shows
+   * the "Could not load your workout" screen with Retry instead of keeping a stale workout on
+   * screen (e.g. a just-finished workout that would keep the screen awake).
+   */
   const refresh = useCallback(async () => {
     try {
       setActive(await workoutService.getActive());
       setLoadFailed(false);
     } catch {
+      setActive(undefined);
       setLoadFailed(true);
     }
   }, [workoutService]);

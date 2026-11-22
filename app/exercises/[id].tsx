@@ -44,7 +44,6 @@ export default function ProgressScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
     >
       <Stack.Screen options={{ title: name ?? t.title }} />

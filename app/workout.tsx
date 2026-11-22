@@ -75,7 +75,6 @@ export default function WorkoutScreen() {
     <View style={styles.screen}>
       <ScrollView
         style={styles.container}
-        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
       >
         <Stack.Screen

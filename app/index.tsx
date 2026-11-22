@@ -46,7 +46,6 @@ export default function Home() {
   return (
     <ScrollView
       style={styles.scroll}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.container, { paddingBottom: 24 + insets.bottom }]}
     >
       <Text style={styles.title}>{strings.home.title}</Text>

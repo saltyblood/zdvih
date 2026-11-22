@@ -41,7 +41,6 @@ export default function NewExerciseScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

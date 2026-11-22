@@ -69,7 +69,6 @@ export default function ExercisesScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
     >
       <Button title={t.add} onPress={() => router.push(NEW_ROUTE)} />
