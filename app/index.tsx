@@ -14,7 +14,7 @@ const WORKOUT_ROUTE = '/workout' as Href;
 
 export default function Home() {
   const router = useRouter();
-  const { active, workoutService, refresh } = useActiveWorkout();
+  const { active, workoutService, settingsService, refresh } = useActiveWorkout();
   const [starting, setStarting] = useState(false);
   const now = useNow();
 
@@ -22,7 +22,9 @@ export default function Home() {
     if (starting) return;
     setStarting(true);
     try {
-      // Step 7 adds the notification permission request here (D14).
+      // D14: the first workout start asks for notification permission. It runs before
+      // startWorkout so the reminder scheduled by the start (R1) already has permission.
+      await settingsService.requestPermissionOnFirstWorkout();
       await workoutService.startWorkout();
       await refresh();
       router.push(WORKOUT_ROUTE);

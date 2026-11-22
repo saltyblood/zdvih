@@ -10,6 +10,7 @@ import type { Clock, Notifier } from '../services/ports';
 import type { ActiveWorkout, WorkoutService } from '../services/workoutService';
 import type { RestService } from '../services/restService';
 import type { ExerciseService } from '../services/exerciseService';
+import type { SettingsService } from '../services/settingsService';
 
 export interface Services {
   db: Db;
@@ -18,6 +19,7 @@ export interface Services {
   workoutService: WorkoutService;
   restService: RestService;
   exerciseService: ExerciseService;
+  settingsService: SettingsService;
 }
 
 export interface ActiveWorkoutContextValue extends Services {

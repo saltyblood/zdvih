@@ -46,6 +46,11 @@ export const strings = {
     errorTitle: 'Error',
     logSet: 'Log set',
   },
+  rest: {
+    start: 'Start rest',
+    restart: 'Restart',
+    stop: 'Stop',
+  },
   muscleGroups: {
     chest: 'Chest',
     back: 'Back',

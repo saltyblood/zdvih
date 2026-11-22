@@ -10,6 +10,8 @@ import { useActiveWorkout } from '@/src/ui/ActiveWorkoutContext';
 import { Button } from '@/src/ui/components/Button';
 import { confirmDialog } from '@/src/ui/components/ConfirmDialog';
 import { EmptyState } from '@/src/ui/components/EmptyState';
+import { NotificationHint } from '@/src/ui/components/NotificationHint';
+import { RestBar } from '@/src/ui/components/RestBar';
 import { SetRow } from '@/src/ui/components/SetRow';
 import { useNow } from '@/src/ui/useNow';
 
@@ -90,7 +92,7 @@ export default function WorkoutScreen() {
             {t.minutes}
           </Text>
         </View>
-        {/* Step 7 adds RestBar and the T6 hint. */}
+        <NotificationHint />
         <View style={styles.body}>
           {groups.length === 0 ? (
             <EmptyState text={t.noSets} />
@@ -115,6 +117,7 @@ export default function WorkoutScreen() {
       </ScrollView>
       {/* §6.2: sticky bottom; D19: respects the bottom safe-area inset. */}
       <View style={[styles.bottom, { paddingBottom: 12 + insets.bottom }]}>
+        <RestBar disabled={finishing} />
         <Button title={t.logSet} onPress={() => router.push('/log-set')} disabled={finishing} />
       </View>
     </View>
@@ -137,5 +140,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ddd',
     backgroundColor: '#fff',
+    gap: 12,
   },
 });

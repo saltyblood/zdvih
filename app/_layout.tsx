@@ -10,6 +10,7 @@ import { createExpoNotifier, installNotificationHandler } from '@/src/platform/e
 import { systemClock } from '@/src/platform/systemClock';
 import { createExerciseService } from '@/src/services/exerciseService';
 import { createRestService } from '@/src/services/restService';
+import { createSettingsService } from '@/src/services/settingsService';
 import { createWorkoutService } from '@/src/services/workoutService';
 import { strings } from '@/src/strings';
 import { ActiveWorkoutProvider, type Services } from '@/src/ui/ActiveWorkoutContext';
@@ -35,6 +36,7 @@ async function bootstrap(): Promise<Services> {
     workoutService: createWorkoutService({ db, notifier, clock }),
     restService: createRestService({ db, notifier, clock, restSeconds: REST_SECONDS }),
     exerciseService: createExerciseService({ db }),
+    settingsService: createSettingsService({ db, notifier }),
   };
 }
 
