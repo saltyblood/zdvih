@@ -93,6 +93,11 @@ export default function RootLayout() {
           name="log-set"
           options={{ title: strings.logSet.titleAdd, presentation: 'modal' }}
         />
+        <Stack.Screen name="exercises/index" options={{ title: strings.exercises.title }} />
+        <Stack.Screen name="exercises/new" options={{ title: strings.exercises.addTitle }} />
+        <Stack.Screen name="exercises/[id]" options={{ title: strings.progress.title }} />
+        <Stack.Screen name="history/index" options={{ title: strings.history.title }} />
+        <Stack.Screen name="history/[id]" options={{ title: strings.history.detailTitle }} />
         <Stack.Screen name="dev-check" options={{ title: strings.devCheck.title }} />
       </Stack>
       <StatusBar style="auto" />
