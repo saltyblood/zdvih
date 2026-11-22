@@ -61,6 +61,7 @@ export default function ExercisesScreen() {
       title: t.deleteTitle,
       message: `${e.name}\n${t.deleteMessage}`,
       confirmLabel: t.delete,
+      destructive: true,
       onConfirm: () => void doDelete(e.id),
     });
   }

@@ -62,6 +62,7 @@ export default function HistoryDetailScreen() {
       title: t.deleteTitle,
       message: t.deleteMessage,
       confirmLabel: t.deleteConfirm,
+      destructive: true,
       onConfirm: () => void doDelete(),
     });
   }

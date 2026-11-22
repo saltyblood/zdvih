@@ -22,6 +22,7 @@ import { errorMessage, strings } from '@/src/strings';
 import { useActiveWorkout } from '@/src/ui/ActiveWorkoutContext';
 import { Button } from '@/src/ui/components/Button';
 import { confirmDialog } from '@/src/ui/components/ConfirmDialog';
+import { EmptyState } from '@/src/ui/components/EmptyState';
 
 export default function LogSetScreen() {
   const router = useRouter();
@@ -182,6 +183,7 @@ export default function LogSetScreen() {
       title: t.deleteTitle,
       message: t.deleteMessage,
       confirmLabel: t.deleteConfirm,
+      destructive: true,
       onConfirm: () => void doDelete(),
     });
   }
@@ -203,7 +205,7 @@ export default function LogSetScreen() {
         <View style={styles.center}>
           <Stack.Screen options={{ title }} />
           <Text style={styles.error}>{errorMessage('NOT_FOUND')}</Text>
-          <Button title={t.cancel} variant="secondary" onPress={() => router.back()} />
+          <Button title={strings.common.cancel} variant="secondary" onPress={() => router.back()} />
         </View>
       );
     }
@@ -230,7 +232,7 @@ export default function LogSetScreen() {
         />
         {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
         {exercises !== null && sections.length === 0 ? (
-          <Text style={styles.muted}>{t.noMatches}</Text>
+          <EmptyState text={t.noMatches} />
         ) : null}
         {sections.map((s) => (
           <View key={s.group} style={styles.section}>
@@ -247,7 +249,7 @@ export default function LogSetScreen() {
             ))}
           </View>
         ))}
-        <Button title={t.cancel} variant="secondary" onPress={() => router.back()} />
+        <Button title={strings.common.cancel} variant="secondary" onPress={() => router.back()} />
       </ScrollView>
     );
   }
@@ -320,7 +322,7 @@ export default function LogSetScreen() {
       {editing ? (
         <Button title={t.deleteSet} variant="secondary" onPress={onDelete} disabled={busy} />
       ) : null}
-      <Button title={t.cancel} variant="secondary" onPress={() => router.back()} disabled={busy} />
+      <Button title={strings.common.cancel} variant="secondary" onPress={() => router.back()} disabled={busy} />
     </ScrollView>
   );
 }

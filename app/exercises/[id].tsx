@@ -8,6 +8,7 @@ import { formatDate } from '@/src/domain/time';
 import type { ProgressPoint } from '@/src/services/workoutService';
 import { strings } from '@/src/strings';
 import { useActiveWorkout } from '@/src/ui/ActiveWorkoutContext';
+import { EmptyState } from '@/src/ui/components/EmptyState';
 import { LineChart } from '@/src/ui/components/LineChart';
 
 export default function ProgressScreen() {
@@ -50,7 +51,7 @@ export default function ProgressScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {points === null ? null : points.length < 2 ? (
         // 5.3b
-        <Text style={styles.muted}>{t.notEnough}</Text>
+        <EmptyState text={t.notEnough} />
       ) : (
         <LineChart
           points={points.map((p) => ({ value: p.e1rmCg, label: formatDate(p.startedAt) }))}
@@ -74,6 +75,5 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 16 },
   list: { gap: 8 },
   row: { fontSize: 16 },
-  muted: { fontSize: 16, color: '#666' },
   error: { color: '#c0392b', fontSize: 15 },
 });

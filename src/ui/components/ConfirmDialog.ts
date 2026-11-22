@@ -6,15 +6,17 @@ export function confirmDialog({
   title,
   message,
   confirmLabel,
+  destructive = false,
   onConfirm,
 }: {
   title: string;
   message: string;
   confirmLabel: string;
+  destructive?: boolean;
   onConfirm: () => void;
 }): void {
   Alert.alert(title, message, [
-    { text: strings.workout.cancel, style: 'cancel' },
-    { text: confirmLabel, onPress: onConfirm },
+    { text: strings.common.cancel, style: 'cancel' },
+    { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
   ]);
 }

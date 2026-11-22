@@ -65,6 +65,7 @@ export default function WorkoutScreen() {
       title: t.finishTitle,
       message: hasSets ? t.finishMessage : t.discardMessage,
       confirmLabel: hasSets ? t.finishConfirm : t.discardConfirm,
+      destructive: !hasSets,
       onConfirm: () => void doFinish(),
     });
   }

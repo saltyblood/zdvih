@@ -14,6 +14,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 export const strings = {
   appName: 'Zdvih',
+  common: {
+    cancel: 'Cancel',
+  },
   home: {
     title: 'Zdvih',
     tagline: 'Offline gym workout log',
@@ -42,7 +45,6 @@ export const strings = {
     discardMessage: 'No sets logged. Discard this workout?',
     finishConfirm: 'Finish',
     discardConfirm: 'Discard',
-    cancel: 'Cancel',
     noSets: 'No sets logged yet.',
     finishFailed: 'Could not finish the workout',
     errorTitle: 'Error',
@@ -79,7 +81,6 @@ export const strings = {
     deleteTitle: 'Delete this set?',
     deleteMessage: 'This cannot be undone.',
     deleteConfirm: 'Delete',
-    cancel: 'Cancel',
     saveFailed: 'Could not save the set',
     deleteFailed: 'Could not delete the set',
     loadFailed: 'Could not load the exercises',
@@ -91,7 +92,6 @@ export const strings = {
     nameLabel: 'Name',
     groupLabel: 'Muscle group',
     save: 'Save',
-    cancel: 'Cancel',
     delete: 'Delete',
     deleteTitle: 'Delete this exercise?',
     deleteMessage: 'This cannot be undone.',

@@ -80,7 +80,7 @@ export default function NewExerciseScreen() {
         ))}
       </View>
       <Button title={t.save} onPress={() => void onSave()} disabled={busy} />
-      <Button title={t.cancel} variant="secondary" onPress={() => router.back()} disabled={busy} />
+      <Button title={strings.common.cancel} variant="secondary" onPress={() => router.back()} disabled={busy} />
     </ScrollView>
   );
 }
