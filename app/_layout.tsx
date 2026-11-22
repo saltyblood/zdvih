@@ -81,7 +81,10 @@ export default function RootLayout() {
   return (
     <ActiveWorkoutProvider services={state.services}>
       <WorkoutRuntime />
-      <Stack>
+      {/* D19: without an explicit header background the iOS 26 header becomes a transparent
+          Liquid Glass bar drawn over the content; headerTransparent: false keeps it opaque and
+          lays every screen out below it. */}
+      <Stack screenOptions={{ headerTransparent: false }}>
         <Stack.Screen name="index" options={{ title: strings.appName }} />
         <Stack.Screen name="workout" options={{ title: strings.workout.title }} />
         <Stack.Screen name="dev-check" options={{ title: strings.devCheck.title }} />

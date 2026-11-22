@@ -64,8 +64,14 @@ export default function WorkoutScreen() {
     });
   }
 
+  // contentInsetAdjustmentBehavior="automatic": the iOS header is translucent and drawn over the
+  // content, so the scroll view insets its content below the header and the notch.
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.content}
+    >
       <Stack.Screen
         options={{
           headerRight: () => (
@@ -82,7 +88,7 @@ export default function WorkoutScreen() {
         </Text>
       </View>
       {/* Step 6 adds the "Log set" button and tappable rows; step 7 adds RestBar and the T6 hint. */}
-      <ScrollView contentContainerStyle={styles.body}>
+      <View style={styles.body}>
         {groups.length === 0 ? (
           <EmptyState text={t.noSets} />
         ) : (
@@ -95,13 +101,14 @@ export default function WorkoutScreen() {
             </View>
           ))
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  content: { flexGrow: 1 },
   header: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#ddd' },
   headerText: { fontSize: 18, fontWeight: '600' },
   finish: { fontSize: 17, fontWeight: "600", color: "#0a7ea4", padding: 8 },
